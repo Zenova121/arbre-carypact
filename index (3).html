@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Réseau CaryPact — Toly</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #07090A;
+    color: #EDEFEF;
+    font-family: 'Inter', -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    top: -20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    height: 500px;
+    background: radial-gradient(ellipse at center, rgba(61,220,132,0.10) 0%, rgba(61,220,132,0) 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 24px 16px 100px;
+  }
+
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #3DDC84;
+    font-family: 'JetBrains Mono', monospace;
+    margin: 0;
+  }
+
+  h1 {
+    font-size: 25px;
+    font-weight: 800;
+    margin: 7px 0 4px;
+    letter-spacing: -0.02em;
+  }
+
+  .lede {
+    font-size: 12.5px;
+    color: #80868C;
+    margin: 0 0 22px;
+  }
+
+  .tree-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .branch {
+    margin-bottom: 4px;
+  }
+
+  .branch-children {
+    margin-left: 20px;
+    padding-left: 16px;
+    border-left: 1px solid #1A1F22;
+    margin-top: 4px;
+    margin-bottom: 4px;
+  }
+
+  .card {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 14px;
+    background: #101314;
+    border: 1px solid #1E2426;
+    border-radius: 9px;
+    cursor: pointer;
+    margin-bottom: 6px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.12s ease;
+  }
+
+  .card:hover {
+    border-color: #2E3A36;
+    box-shadow: 0 0 0 1px rgba(61,220,132,0.08), 0 6px 20px -8px rgba(0,0,0,0.5);
+    transform: translateY(-1px);
+  }
+
+  .card:active { transform: translateY(0); }
+
+  .card.dim { opacity: 0.6; }
+
+  .card.is-wallet {
+    background: linear-gradient(160deg, #101716, #0D1110);
+  }
+
+  .card.is-wallet.is-active {
+    border-color: #2C5841;
+    background: linear-gradient(160deg, #12241B, #0D1411);
+    box-shadow: 0 0 0 1px rgba(61,220,132,0.1), 0 8px 24px -8px rgba(61,220,132,0.2);
+  }
+
+  .card-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .card-name {
+    font-size: 13.5px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .card-tag {
+    font-size: 10px;
+    color: #5C6368;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .card-badge {
+    font-size: 8.5px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.03em;
+  }
+
+  .chevron {
+    color: #4A5054;
+    font-size: 10px;
+    margin-left: 2px;
+  }
+
+  /* FAB */
+  .fab {
+    position: fixed;
+    bottom: 22px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #3DDC84;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 30px -6px rgba(61,220,132,0.55);
+    cursor: pointer;
+    z-index: 40;
+    font-size: 26px;
+    color: #07090A;
+    font-weight: 300;
+    transition: transform 0.15s ease;
+  }
+  .fab:active { transform: scale(0.92); }
+
+  /* Modal */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(4,6,5,0.78);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+  .overlay.open { opacity: 1; pointer-events: auto; }
+
+  @media (min-width: 640px) {
+    .overlay { align-items: center; }
+  }
+
+  .sheet {
+    background: #12161A;
+    background: linear-gradient(180deg, #141A1B, #0F1314);
+    border: 1px solid #20272A;
+    border-radius: 18px 18px 0 0;
+    width: 100%;
+    max-width: 440px;
+    max-height: 86vh;
+    overflow-y: auto;
+    padding: 18px 20px 26px;
+    transform: translateY(30px);
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @media (min-width: 640px) {
+    .sheet { border-radius: 18px; transform: translateY(12px) scale(0.96); }
+  }
+
+  .overlay.open .sheet { transform: translateY(0) scale(1); }
+
+  .handle {
+    width: 34px;
+    height: 4px;
+    border-radius: 2px;
+    background: #262E31;
+    margin: 0 auto 16px;
+  }
+
+  @media (min-width: 640px) { .handle { display: none; } }
+
+  .sheet-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 14px;
+  }
+
+  .sheet-title {
+    font-size: 19px;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+
+  .sheet-sub {
+    font-size: 11.5px;
+    color: #6B7278;
+    margin: 2px 0 0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .close-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #1A1F22;
+    border: 1px solid #262E31;
+    color: #80868C;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .badges-row {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .field {
+    padding: 10px 0;
+    border-bottom: 1px solid #181D1F;
+  }
+  .field:last-of-type { border-bottom: none; }
+
+  .field-label {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #565D62;
+    margin-bottom: 4px;
+  }
+
+  .field-value {
+    font-size: 14px;
+    color: #E5E7E8;
+  }
+
+  .field-value.mono { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; }
+
+  .notes-box {
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: #171C1D;
+    border: 1px solid #1F2629;
+    border-radius: 10px;
+    font-size: 12.5px;
+    color: #9DA4A8;
+    line-height: 1.55;
+  }
+
+  .notes-box.warn {
+    border-color: rgba(232,163,61,0.28);
+    background: rgba(232,163,61,0.06);
+    color: #D9A85C;
+  }
+
+  .action-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 18px;
+  }
+
+  .btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 0;
+    border-radius: 9px;
+    border: 1px solid #262E31;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    background: #161B1D;
+    color: #C7CCCF;
+  }
+
+  .btn.primary {
+    background: #3DDC84;
+    color: #07090A;
+    border: none;
+    font-weight: 700;
+  }
+
+  .btn.danger {
+    flex: 0 0 44px;
+    color: #E8856F;
+    background: #1E1413;
+    border-color: #2E1D1A;
+  }
+
+  /* Form */
+  .form-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #6B7278;
+    margin: 14px 0 6px;
+  }
+
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 9px;
+    background: #15191B;
+    border: 1px solid #232A2D;
+    color: #EDEFEF;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+  }
+
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: #3DDC84;
+  }
+
+  .form-textarea { resize: none; }
+
+  .footer-note {
+    text-align: center;
+    font-size: 10px;
+    color: #4A5054;
+    margin-top: 32px;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.7;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #565D62;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+<div id="app" class="app"></div>
+
+<script>
+/* ---------- Seed data from Notion (snapshot) ---------- */
+var STORAGE_KEY = "carypact-network-v1";
+
+var SEED_DATA = [
+  { id: "barbara", nom: "Barbara", parrain: null, u: null, statut: "Actif", isWallet: false, locked: true,
+    notes: "Tête de réseau. Sponsor d'Olinka." },
+  { id: "olinka", nom: "Olinka", parrain: "barbara", u: 104, statut: "Actif", niveau: "V1", isWallet: false, locked: true,
+    notes: "Parrain direct de Toly." },
+  { id: "toly", nom: "Toly", parrain: "olinka", u: 100, statut: "Actif", isWallet: false, locked: true,
+    notes: "Toi." },
+  { id: "w1", nom: "Wallet 1 — Principal", parrain: "toly", isWallet: true, locked: true,
+    wallet: "0x6BE5...A338", code: "neG8Y5", perf: 0, adresses: 1,
+    notes: "Wallet principal. Aucune activité de réseau enregistrée pour le moment." },
+  { id: "w2", nom: "Wallet 2", parrain: "toly", isWallet: true, locked: true, actif: true,
+    wallet: "0x3053...3793", code: "QGjLaB", perf: 8504.2, adresses: 13,
+    notes: "Branche active : 13 adresses, $8504.2 de performance, 20 039.61 T/H. Contient probablement Ropoama et sa descendance — déduit des chiffres de l'app, non confirmé par écrit dans Notion." },
+  { id: "w3", nom: "Wallet 3", parrain: "toly", isWallet: true, locked: true,
+    wallet: "0x5f3D...F0D9", code: "3djazm", perf: 0, adresses: 1,
+    notes: "Aucune activité de réseau enregistrée pour le moment." },
+  { id: "w4", nom: "Wallet 4 (?)", parrain: "toly", isWallet: true, locked: true,
+    wallet: "0xdC16...32E9", code: null, perf: 0, adresses: 1,
+    notes: "Visible dans l'app CaryPact mais non documenté dans la page Notion « 🔑 Toly », qui n'en liste que 3. À clarifier." },
+  { id: "ropoama", nom: "Ropoama", parrain: "w2", u: 4900, statut: "Actif", isWallet: false,
+    notes: "Filleul direct confirmé de Toly. Rattachement précis au Wallet 2 déduit, non confirmé par écrit. Canal d'acquisition : Facebook." },
+  { id: "marie", nom: "Marie (mère de Ropoama)", parrain: "ropoama", u: 800, statut: "Actif", isWallet: false, notes: "" },
+  { id: "mevrick", nom: "Mevrick (fils de Ropoama)", parrain: null, isWallet: false,
+    notes: "Champ « Parrain direct » non renseigné dans Notion. Rattachement à Ropoama supposé via le contexte familial, à confirmer." },
+  { id: "aymerick", nom: "Aymerick (fils de Ropoama)", parrain: null, isWallet: false,
+    notes: "Champ « Parrain direct » non renseigné dans Notion. Rattachement à Ropoama supposé via le contexte familial, à confirmer." },
+  { id: "manu", nom: "Manu", parrain: null, statut: "Actif", isWallet: false,
+    notes: "Branche totalement indépendante du réseau de Toly." },
+  { id: "vetea", nom: "Vetea", parrain: "manu", u: 900, isWallet: false, notes: "Canal d'acquisition : Facebook. Puissance minage : 1518U." },
+  { id: "sonia", nom: "Sonia", parrain: "manu", u: 143, isWallet: false, notes: "Canal d'acquisition : Facebook." },
+  { id: "romanella", nom: "Romanella", parrain: "vetea", u: 205, isWallet: false, notes: "Canal d'acquisition : Facebook." },
+  { id: "jacques", nom: "Jacques", parrain: "romanella", u: 184, isWallet: false, notes: "" },
+  { id: "faby", nom: "Faby", parrain: "romanella", u: 195, isWallet: false, notes: "Puissance minage : 525U." },
+  { id: "jeremy", nom: "Jeremy", parrain: "jacques", u: 250, isWallet: false, notes: "Puissance minage : 757.04U." },
+  { id: "nathalie", nom: "Nathalie", parrain: "jeremy", u: 139, isWallet: false, notes: "Puissance minage : 425U." }
+];
+
+var STATUS_COLOR = { "Actif": "#3DDC84", "Inactif": "#5A6168" };
+
+var state = {
+  people: null,
+  modal: null,      // { type: 'detail'|'form', person?, editId? }
+  formData: { nom: "", parrain: "", u: "", statut: "Actif", notes: "" },
+  confirmDeleteId: null
+};
+
+function uid() {
+  return "m" + Math.random().toString(36).slice(2, 10);
+}
+
+function loadData() {
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      state.people = JSON.parse(raw);
+      return;
+    }
+  } catch (e) {}
+  state.people = SEED_DATA.slice();
+  persist();
+}
+
+function persist() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.people));
+  } catch (e) {
+    console.error("Save failed", e);
+  }
+}
+
+function findById(id) {
+  return state.people.find(function (p) { return p.id === id; });
+}
+
+function childrenOf(id) {
+  return state.people.filter(function (p) { return p.parrain === id; });
+}
+
+function el(tag, attrs, children) {
+  var node = document.createElement(tag);
+  attrs = attrs || {};
+  for (var k in attrs) {
+    if (k === "style") Object.assign(node.style, attrs[k]);
+    else if (k === "onclick") node.addEventListener("click", attrs[k]);
+    else if (k === "oninput") node.addEventListener("input", attrs[k]);
+    else if (k === "class") node.className = attrs[k];
+    else if (k === "value") node.value = attrs[k];
+    else node.setAttribute(k, attrs[k]);
+  }
+  (children || []).forEach(function (c) {
+    if (c == null) return;
+    if (typeof c === "string") node.appendChild(document.createTextNode(c));
+    else node.appendChild(c);
+  });
+  return node;
+}
+
+/* ---------- Tree rendering ---------- */
+
+function renderCard(p) {
+  var dim = !p.isWallet && !p.statut;
+  var dotColor = p.isWallet
+    ? (p.actif ? "#3DDC84" : "#4A5054")
+    : (p.statut ? (STATUS_COLOR[p.statut] || "#E8A33D") : "#E8A33D");
+
+  var children = [
+    el("span", { class: "card-dot", style: { background: dotColor } }, []),
+    el("span", { class: "card-name" }, [p.nom])
+  ];
+
+  if (p.u != null) children.push(el("span", { class: "card-tag" }, [p.u + "U"]));
+  if (p.niveau) {
+    children.push(el("span", { class: "card-badge", style: { background: "#5B8AA622", color: "#5B8AA6" } }, [p.niveau]));
+  }
+  if (p.isWallet && p.actif) {
+    children.push(el("span", { class: "card-badge", style: { background: "#3DDC8422", color: "#3DDC84" } }, ["ACTIF"]));
+  }
+
+  var hasChildren = childrenOf(p.id).length > 0;
+  if (hasChildren) children.push(el("span", { class: "chevron" }, ["▾"]));
+
+  var classes = "card" + (dim ? " dim" : "") + (p.isWallet ? " is-wallet" : "") + (p.isWallet && p.actif ? " is-active" : "");
+
+  return el("div", { class: classes, onclick: function () { openDetail(p); } }, children);
+}
+
+function renderBranch(person) {
+  var kids = childrenOf(person.id);
+  var wrap = el("div", { class: "branch" }, [renderCard(person)]);
+  if (kids.length > 0) {
+    var childWrap = el("div", { class: "branch-children" }, kids.map(renderBranch));
+    wrap.appendChild(childWrap);
+  }
+  return wrap;
+}
+
+/* ---------- Modal: detail ---------- */
+
+function field(label, value, mono) {
+  if (value == null || value === "") return null;
+  return el("div", { class: "field" }, [
+    el("div", { class: "field-label" }, [label]),
+    el("div", { class: "field-value" + (mono ? " mono" : "") }, [String(value)])
+  ]);
+}
+
+function openDetail(p) {
+  state.modal = { type: "detail", person: p };
+  render();
+}
+
+function openAddForm(prefillParrain) {
+  state.formData = { nom: "", parrain: prefillParrain || "", u: "", statut: "Actif", notes: "" };
+  state.modal = { type: "form", editId: null };
+  render();
+}
+
+function openEditForm(p) {
+  state.formData = {
+    nom: p.nom,
+    parrain: p.parrain || "",
+    u: p.u != null ? String(p.u) : "",
+    statut: p.statut || "",
+    notes: p.notes || ""
+  };
+  state.modal = { type: "form", editId: p.id };
+  render();
+}
+
+function closeModal() {
+  state.modal = null;
+  state.confirmDeleteId = null;
+  render();
+}
+
+function submitForm() {
+  var f = state.formData;
+  if (!f.nom || !f.nom.trim()) return;
+  if (state.modal.editId) {
+    var idx = state.people.findIndex(function (p) { return p.id === state.modal.editId; });
+    if (idx !== -1) {
+      state.people[idx] = Object.assign({}, state.people[idx], {
+        nom: f.nom.trim(),
+        parrain: f.parrain || null,
+        u: f.u ? Number(f.u) : null,
+        statut: f.statut || null,
+        notes: f.notes
+      });
+    }
+  } else {
+    state.people.push({
+      id: uid(),
+      nom: f.nom.trim(),
+      parrain: f.parrain || null,
+      u: f.u ? Number(f.u) : null,
+      statut: f.statut || null,
+      isWallet: false,
+      notes: f.notes
+    });
+  }
+  persist();
+  closeModal();
+}
+
+function deletePerson(id) {
+  state.people = state.people
+    .filter(function (p) { return p.id !== id; })
+    .map(function (p) { return p.parrain === id ? Object.assign({}, p, { parrain: null }) : p; });
+  persist();
+  closeModal();
+}
+
+function renderDetailSheet(p) {
+  var badges = [];
+  if (p.statut) {
+    badges.push(el("span", { class: "card-badge", style: { background: (STATUS_COLOR[p.statut] || "#8A9196") + "22", color: STATUS_COLOR[p.statut] || "#8A9196", fontSize: "9.5px", padding: "3px 8px" } }, [p.statut.toUpperCase()]));
+  } else if (!p.isWallet) {
+    badges.push(el("span", { class: "card-badge", style: { background: "#E8A33D22", color: "#E8A33D", fontSize: "9.5px", padding: "3px 8px" } }, ["NON RENSEIGNÉ"]));
+  }
+  if (p.niveau) {
+    badges.push(el("span", { class: "card-badge", style: { background: "#5B8AA622", color: "#5B8AA6", fontSize: "9.5px", padding: "3px 8px" } }, [p.niveau]));
+  }
+  if (p.isWallet && p.actif) {
+    badges.push(el("span", { class: "card-badge", style: { background: "#3DDC8422", color: "#3DDC84", fontSize: "9.5px", padding: "3px 8px" } }, ["ACTIF"]));
+  }
+
+  var fields = [];
+  if (p.isWallet) {
+    fields.push(field("Adresse", p.wallet, true));
+    fields.push(field("Code d'invitation", p.code || "—", true));
+    fields.push(field("Performance", "$" + (p.perf || 0).toLocaleString("fr-FR")));
+    fields.push(field("Adresses", p.adresses));
+  } else {
+    var parrainNode = p.parrain ? findById(p.parrain) : null;
+    fields.push(field("Parrain direct", parrainNode ? parrainNode.nom : "—"));
+    fields.push(field("Puissance individuelle", p.u != null ? p.u + " U" : "—"));
+    fields.push(field("Filleuls directs", childrenOf(p.id).length));
+  }
+
+  var sheetChildren = [
+    el("div", { class: "handle" }, []),
+    el("div", { class: "sheet-title-row" }, [
+      el("div", {}, [
+        el("p", { class: "sheet-title" }, [p.nom]),
+        p.isWallet ? null : null
+      ]),
+      el("div", { class: "close-btn", onclick: closeModal }, ["✕"])
+    ]),
+    el("div", { class: "badges-row" }, badges)
+  ];
+
+  fields.forEach(function (f) { if (f) sheetChildren.push(f); });
+
+  if (p.notes) {
+    var isWarn = p.notes.indexOf("à confirmer") !== -1 || p.notes.indexOf("non renseigné") !== -1 || p.notes.indexOf("déduit") !== -1 || p.notes.indexOf("non documenté") !== -1;
+    sheetChildren.push(el("div", { class: "notes-box" + (isWarn ? " warn" : "") }, [(isWarn ? "⚠ " : "") + p.notes]));
+  }
+
+  var actionRow = [];
+  actionRow.push(el("div", { class: "btn", onclick: function () { openAddForm(p.id); } }, ["+ Filleul"]));
+  if (!p.locked) {
+    actionRow.push(el("div", { class: "btn", onclick: function () { openEditForm(p); } }, ["Modifier"]));
+    actionRow.push(el("div", { class: "btn danger", onclick: function () { state.confirmDeleteId = p.id; render(); } }, ["🗑"]));
+  }
+  sheetChildren.push(el("div", { class: "action-row" }, actionRow));
+
+  if (state.confirmDeleteId === p.id) {
+    sheetChildren.push(el("div", { style: { marginTop: 14, padding: "12px 14px", background: "#1E1413", border: "1px solid #2E1D1A", borderRadius: 10 } }, [
+      el("p", { style: { fontSize: "13px", color: "#E8856F", margin: "0 0 10px", lineHeight: "1.5" } }, ["Supprimer " + p.nom + " ? Ses filleuls deviendront orphelins."]),
+      el("div", { class: "action-row", style: { marginTop: 0 } }, [
+        el("div", { class: "btn", onclick: function () { state.confirmDeleteId = null; render(); } }, ["Annuler"]),
+        el("div", { class: "btn", style: { background: "#E8856F", color: "#07090A", border: "none" }, onclick: function () { deletePerson(p.id); } }, ["Confirmer"])
+      ])
+    ]));
+  }
+
+  return el("div", { class: "sheet", onclick: function (e) { e.stopPropagation(); } }, sheetChildren);
+}
+
+/* ---------- Modal: form ---------- */
+
+function renderFormSheet() {
+  var isEdit = Boolean(state.modal.editId);
+  var f = state.formData;
+
+  function updateField(key, value) {
+    state.formData[key] = value;
+  }
+
+  var nomInput = el("input", {
+    class: "form-input", value: f.nom, placeholder: "Ex: Jean Dupont",
+    oninput: function (e) { updateField("nom", e.target.value); }
+  }, []);
+
+  var parrainSelect = el("select", {
+    class: "form-select",
+    oninput: function (e) { updateField("parrain", e.target.value); }
+  }, [el("option", { value: "" }, ["— Aucun (racine) —"])].concat(
+    state.people.filter(function (p) { return !p.isWallet; }).map(function (p) {
+      var opt = el("option", { value: p.id }, [p.nom]);
+      if (p.id === f.parrain) opt.setAttribute("selected", "selected");
+      return opt;
+    })
+  ));
+
+  var uInput = el("input", {
+    class: "form-input", type: "number", value: f.u, placeholder: "Ex: 250",
+    oninput: function (e) { updateField("u", e.target.value); }
+  }, []);
+
+  var statutSelect = el("select", {
+    class: "form-select",
+    oninput: function (e) { updateField("statut", e.target.value); }
+  }, ["", "Actif", "Inactif"].map(function (s) {
+    var opt = el("option", { value: s }, [s || "Non renseigné"]);
+    if (s === f.statut) opt.setAttribute("selected", "selected");
+    return opt;
+  }));
+
+  var notesTextarea = el("textarea", {
+    class: "form-textarea", rows: "3", placeholder: "Canal d'acquisition, remarques...",
+    oninput: function (e) { updateField("notes", e.target.value); }
+  }, [f.notes || ""]);
+
+  return el("div", { class: "sheet", onclick: function (e) { e.stopPropagation(); } }, [
+    el("div", { class: "handle" }, []),
+    el("p", { class: "sheet-title", style: { marginBottom: "16px" } }, [isEdit ? "Modifier le membre" : "Ajouter un filleul"]),
+    el("label", { class: "form-label" }, ["Nom"]),
+    nomInput,
+    el("label", { class: "form-label" }, ["Parrain direct"]),
+    parrainSelect,
+    el("label", { class: "form-label" }, ["Puissance individuelle (U)"]),
+    uInput,
+    el("label", { class: "form-label" }, ["Statut"]),
+    statutSelect,
+    el("label", { class: "form-label" }, ["Notes"]),
+    notesTextarea,
+    el("div", { class: "action-row" }, [
+      el("div", { class: "btn", onclick: closeModal }, ["Annuler"]),
+      el("div", { class: "btn primary", onclick: submitForm }, [isEdit ? "Enregistrer" : "Ajouter"])
+    ])
+  ]);
+}
+
+/* ---------- Main render ---------- */
+
+function render() {
+  var root = document.getElementById("app");
+  root.innerHTML = "";
+
+  root.appendChild(el("p", { class: "eyebrow" }, ["CaryPact · BOT Chain"]));
+  root.appendChild(el("h1", {}, ["Réseau de Toly"]));
+  var memberCount = state.people.filter(function (p) { return !p.isWallet; }).length;
+  root.appendChild(el("p", { class: "lede" }, [memberCount + " membres · Tape « + » pour ajouter un filleul"]));
+
+  var roots = state.people.filter(function (p) { return !p.parrain || !findById(p.parrain); });
+
+  if (roots.length === 0) {
+    root.appendChild(el("div", { class: "empty-state" }, ["Aucun membre pour le moment."]));
+  } else {
+    var treeWrap = el("div", { class: "tree-wrap" }, roots.map(renderBranch));
+    root.appendChild(treeWrap);
+  }
+
+  root.appendChild(el("p", { class: "footer-note" }, [
+    "Données stockées localement sur cet appareil.",
+    document.createElement("br"),
+    "💡 Tape sur une carte pour voir le détail ou ajouter un filleul."
+  ]));
+
+  // FAB
+  root.appendChild(el("button", { class: "fab", onclick: function () { openAddForm(""); } }, ["+"]));
+
+  // Modal
+  if (state.modal) {
+    var sheet = state.modal.type === "detail" ? renderDetailSheet(state.modal.person) : renderFormSheet();
+    var overlay = el("div", { class: "overlay open", onclick: closeModal }, [sheet]);
+    root.appendChild(overlay);
+  }
+}
+
+loadData();
+render();
+</script>
+</body>
+</html>
