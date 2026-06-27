@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Réseau CaryPact — Toly</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #07090A;
+    color: #EDEFEF;
+    font-family: 'Inter', -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(7,9,10,0.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid #1A1F22;
+    padding: 14px 16px;
+  }
+
+  .eyebrow {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #3DDC84;
+    font-family: 'JetBrains Mono', monospace;
+    margin: 0;
+  }
+
+  h1 {
+    font-size: 19px;
+    font-weight: 800;
+    margin: 4px 0 0;
+    letter-spacing: -0.02em;
+  }
+
+  .canvas-scroll {
+    overflow: auto;
+    width: 100%;
+    padding: 30px 20px 120px;
+  }
+
+  .canvas {
+    position: relative;
+    margin: 0 auto;
+  }
+
+  svg.connectors {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  .level {
+    display: flex;
+    justify-content: center;
+    gap: 28px;
+    position: relative;
+    margin-bottom: 56px;
+  }
+
+  .node-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .card {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    background: #101314;
+    border: 1px solid #1E2426;
+    border-radius: 9px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.12s ease;
+    z-index: 2;
+  }
+
+  .card:hover {
+    border-color: #2E3A36;
+    box-shadow: 0 0 0 1px rgba(61,220,132,0.08), 0 6px 20px -8px rgba(0,0,0,0.5);
+    transform: translateY(-1px);
+  }
+
+  .card.dim { opacity: 0.55; }
+  .card.placeholder { border-style: dashed; opacity: 0.45; }
+  .card.is-wallet { background: linear-gradient(160deg, #101716, #0D1110); }
+  .card.is-wallet.is-active {
+    border-color: #2C5841;
+    background: linear-gradient(160deg, #12241B, #0D1411);
+    box-shadow: 0 0 0 1px rgba(61,220,132,0.1), 0 8px 24px -8px rgba(61,220,132,0.2);
+  }
+  .card.is-root {
+    border-color: #3DDC84;
+    background: linear-gradient(160deg, #12241B, #0D1110);
+  }
+
+  .card-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .card-name { font-size: 13px; font-weight: 600; }
+  .card-tag { font-size: 9.5px; color: #5C6368; font-family: 'JetBrains Mono', monospace; }
+  .card-badge { font-size: 8px; font-weight: 700; padding: 1px 5px; border-radius: 4px; letter-spacing: 0.03em; }
+
+  .group-children {
+    display: flex;
+    gap: 24px;
+    margin-top: 56px;
+    position: relative;
+  }
+
+  .fab {
+    position: fixed; bottom: 22px; right: 20px;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: #3DDC84; border: none;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 10px 30px -6px rgba(61,220,132,0.55);
+    cursor: pointer; z-index: 40; font-size: 26px; color: #07090A; font-weight: 300;
+  }
+  .fab:active { transform: scale(0.92); }
+
+  .overlay {
+    position: fixed; inset: 0; background: rgba(4,6,5,0.78); backdrop-filter: blur(4px);
+    display: flex; align-items: flex-end; justify-content: center; z-index: 100;
+  }
+  @media (min-width: 640px) { .overlay { align-items: center; } }
+
+  .sheet {
+    background: linear-gradient(180deg, #141A1B, #0F1314);
+    border: 1px solid #20272A; border-radius: 18px 18px 0 0;
+    width: 100%; max-width: 440px; max-height: 86vh; overflow-y: auto;
+    padding: 18px 20px 26px;
+  }
+  @media (min-width: 640px) { .sheet { border-radius: 18px; } }
+
+  .handle { width: 34px; height: 4px; border-radius: 2px; background: #262E31; margin: 0 auto 16px; }
+  @media (min-width: 640px) { .handle { display: none; } }
+
+  .sheet-title-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+  .sheet-title { font-size: 19px; font-weight: 800; margin: 0; letter-spacing: -0.01em; }
+  .close-btn {
+    width: 28px; height: 28px; border-radius: 50%; background: #1A1F22; border: 1px solid #262E31;
+    color: #80868C; font-size: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+  }
+
+  .badges-row { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 16px; }
+  .field { padding: 10px 0; border-bottom: 1px solid #181D1F; }
+  .field:last-of-type { border-bottom: none; }
+  .field-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #565D62; margin-bottom: 4px; }
+  .field-value { font-size: 14px; color: #E5E7E8; }
+  .field-value.mono { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; }
+
+  .notes-box {
+    margin-top: 14px; padding: 12px 14px; background: #171C1D; border: 1px solid #1F2629;
+    border-radius: 10px; font-size: 12.5px; color: #9DA4A8; line-height: 1.55;
+  }
+  .notes-box.warn { border-color: rgba(232,163,61,0.28); background: rgba(232,163,61,0.06); color: #D9A85C; }
+
+  .action-row { display: flex; gap: 8px; margin-top: 18px; }
+  .btn {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 10px 0; border-radius: 9px; border: 1px solid #262E31; font-size: 12.5px; font-weight: 600;
+    cursor: pointer; background: #161B1D; color: #C7CCCF;
+  }
+  .btn.primary { background: #3DDC84; color: #07090A; border: none; font-weight: 700; }
+  .btn.danger { flex: 0 0 44px; color: #E8856F; background: #1E1413; border-color: #2E1D1A; }
+
+  .form-label { display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #6B7278; margin: 14px 0 6px; }
+  .form-input, .form-select, .form-textarea {
+    width: 100%; padding: 10px 12px; border-radius: 9px; background: #15191B; border: 1px solid #232A2D;
+    color: #EDEFEF; font-size: 14px; font-family: inherit; outline: none;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: #3DDC84; }
+  .form-textarea { resize: none; }
+
+  .footer-note {
+    text-align: center; font-size: 10px; color: #4A5054; margin-top: 24px;
+    font-family: 'JetBrains Mono', monospace; line-height: 1.7; padding: 0 16px 20px;
+  }
+
+  .legend {
+    display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 6px; padding: 0 16px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 10.5px; color: #6B7278; }
+  .legend-dot { width: 6px; height: 6px; border-radius: 50%; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <p class="eyebrow">CaryPact · BOT Chain</p>
+  <h1 id="member-count-title">Réseau de Toly</h1>
+</div>
+<div class="canvas-scroll">
+  <div id="canvas" class="canvas"></div>
+  <div class="legend">
+    <div class="legend-item"><span class="legend-dot" style="background:#3DDC84"></span>Actif</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#5A6168"></span>Inactif</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#E8A33D"></span>Non renseigné / à confirmer</div>
+  </div>
+  <p class="footer-note">Données stockées localement sur cet appareil.<br>💡 Tape sur une carte pour voir le détail ou ajouter un filleul.</p>
+</div>
+<button class="fab" id="fab-add">+</button>
+<div id="modal-root"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+/* ============================================================
+   CONFIGURATION SUPABASE — À REMPLIR PAR TOLY
+   Remplace les deux lignes ci-dessous par TON URL et TA clé publiable
+   (trouvées dans Supabase : Settings > Clés API)
+   ============================================================ */
+var SUPABASE_URL = "https://vwxzkvvvlfdmzelbfrog.supabase.co/rest/v1/";
+var SUPABASE_ANON_KEY = "sb_publishable_kmlKKjX3zffY41ensFxsdw_9cErncHK";
+/* ============================================================ */
+
+var supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+
+var SEED_DATA = [
+  { id: "barbara", nom: "Barbara", parrain: null, u: null, statut: "Actif", isWallet: false, locked: true,
+    notes: "Tête de réseau. Sponsor d'Olinka." },
+  { id: "olinka", nom: "Olinka", parrain: "barbara", u: 104, statut: "Actif", niveau: "V1", isWallet: false, locked: true,
+    notes: "Parrain direct de Toly et de Manu." },
+  { id: "toly", nom: "Toly", parrain: "olinka", u: 100, statut: "Actif", isWallet: false, locked: true,
+    notes: "Toi." },
+  { id: "manu", nom: "Manu", parrain: "olinka", statut: "Actif", isWallet: false,
+    notes: "Filleul direct d'Olinka (confirmé par Toly — pas encore écrit dans le champ « Parrain direct » de Notion)." },
+  { id: "w1", nom: "Wallet 1 — Principal", parrain: "toly", isWallet: true, locked: true,
+    wallet: "0x6BE5...A338", code: "neG8Y5", perf: 0, adresses: 1,
+    notes: "Wallet principal de Toly. Aucune activité de réseau enregistrée pour le moment." },
+  { id: "w2", nom: "Wallet 2", parrain: "toly", isWallet: true, locked: true, actif: true,
+    wallet: "0x3053...3793", code: "QGjLaB", perf: 8504.2, adresses: 13,
+    notes: "Branche active de Toly : 13 adresses, $8504.2 de performance. Contient probablement Ropoama et sa descendance — déduit des chiffres de l'app, non confirmé par écrit." },
+  { id: "w3", nom: "Wallet 3", parrain: "toly", isWallet: true, locked: true,
+    wallet: "0x5f3D...F0D9", code: "3djazm", perf: 0, adresses: 1,
+    notes: "Aucune activité enregistrée." },
+  { id: "w4", nom: "Wallet 4 (?)", parrain: "toly", isWallet: true, locked: true,
+    wallet: "0xdC16...32E9", code: null, perf: 0, adresses: 1,
+    notes: "Visible dans l'app CaryPact mais non documenté dans Notion. À clarifier." },
+  { id: "manu_wallets", nom: "Wallets de Manu (?)", parrain: "manu", isWallet: true, isPlaceholder: true, locked: true,
+    notes: "Wallets de Manu non encore renseignés. À compléter quand l'info sera disponible." },
+  { id: "ropoama", nom: "Ropoama", parrain: "w2", u: 4900, statut: "Actif", isWallet: false,
+    notes: "Filleul direct confirmé de Toly. Rattachement précis au Wallet 2 déduit, non confirmé par écrit. Canal : Facebook." },
+  { id: "marie", nom: "Marie (mère de Ropoama)", parrain: "ropoama", u: 800, statut: "Actif", isWallet: false, notes: "" },
+  { id: "mevrick", nom: "Mevrick (fils de Ropoama)", parrain: "ropoama", isWallet: false,
+    notes: "Champ « Parrain direct » non renseigné dans Notion — rattachement à Ropoama supposé via le contexte familial, à confirmer." },
+  { id: "aymerick", nom: "Aymerick (fils de Ropoama)", parrain: "ropoama", isWallet: false,
+    notes: "Champ « Parrain direct » non renseigné dans Notion — rattachement à Ropoama supposé via le contexte familial, à confirmer." },
+  { id: "vetea", nom: "Vetea", parrain: "manu", u: 900, isWallet: false, notes: "Canal : Facebook. Puissance minage : 1518U." },
+  { id: "sonia", nom: "Sonia", parrain: "manu", u: 143, isWallet: false, notes: "Canal : Facebook." },
+  { id: "romanella", nom: "Romanella", parrain: "vetea", u: 205, isWallet: false, notes: "Canal : Facebook." },
+  { id: "jacques", nom: "Jacques", parrain: "romanella", u: 184, isWallet: false, notes: "" },
+  { id: "faby", nom: "Faby", parrain: "romanella", u: 195, isWallet: false, notes: "Puissance minage : 525U." },
+  { id: "jeremy", nom: "Jeremy", parrain: "jacques", u: 250, isWallet: false, notes: "Puissance minage : 757.04U." },
+  { id: "nathalie", nom: "Nathalie", parrain: "jeremy", u: 139, isWallet: false, notes: "Puissance minage : 425U." }
+];
+
+var STATUS_COLOR = { "Actif": "#3DDC84", "Inactif": "#5A6168" };
+
+var state = { people: null, modal: null, formData: {}, confirmDeleteId: null, loading: true, error: null };
+
+function uid() { return "m" + Math.random().toString(36).slice(2, 10); }
+
+function mapRowToPerson(row) {
+  return {
+    id: row.id,
+    nom: row.nom,
+    parrain: row.parrain,
+    u: row.u,
+    statut: row.statut,
+    niveau: row.niveau,
+    isWallet: row.is_wallet,
+    isPlaceholder: row.is_placeholder,
+    actif: row.actif,
+    wallet: row.wallet,
+    code: row.code,
+    perf: row.perf,
+    adresses: row.adresses,
+    notes: row.notes,
+    locked: row.locked
+  };
+}
+
+function mapPersonToRow(p) {
+  return {
+    id: p.id,
+    nom: p.nom,
+    parrain: p.parrain || null,
+    u: p.u != null ? p.u : null,
+    statut: p.statut || null,
+    niveau: p.niveau || null,
+    is_wallet: Boolean(p.isWallet),
+    is_placeholder: Boolean(p.isPlaceholder),
+    actif: Boolean(p.actif),
+    wallet: p.wallet || null,
+    code: p.code || null,
+    perf: p.perf != null ? p.perf : null,
+    adresses: p.adresses != null ? p.adresses : null,
+    notes: p.notes || null,
+    locked: Boolean(p.locked)
+  };
+}
+
+async function loadData() {
+  state.loading = true;
+  state.error = null;
+  render();
+  try {
+    var result = await supabaseClient.from("members").select("*");
+    if (result.error) throw result.error;
+
+    if (!result.data || result.data.length === 0) {
+      // First time: seed the table with initial data from Notion snapshot
+      var rows = SEED_DATA.map(mapPersonToRow);
+      var insertResult = await supabaseClient.from("members").insert(rows);
+      if (insertResult.error) throw insertResult.error;
+      state.people = SEED_DATA.slice();
+    } else {
+      state.people = result.data.map(mapRowToPerson);
+    }
+  } catch (e) {
+    state.error = (e && e.message) ? e.message : "Erreur de connexion à la base de données.";
+    state.people = SEED_DATA.slice(); // fallback so the app still shows something
+  }
+  state.loading = false;
+  render();
+  updateTitle();
+}
+
+async function persistUpsert(person) {
+  try {
+    var row = mapPersonToRow(person);
+    var result = await supabaseClient.from("members").upsert(row);
+    if (result.error) console.error("Supabase upsert error", result.error);
+  } catch (e) {
+    console.error("Persist failed", e);
+  }
+}
+
+async function persistDelete(id) {
+  try {
+    var result = await supabaseClient.from("members").delete().eq("id", id);
+    if (result.error) console.error("Supabase delete error", result.error);
+  } catch (e) {
+    console.error("Delete failed", e);
+  }
+}
+
+function findById(id) { return state.people.find(function (p) { return p.id === id; }); }
+function childrenOf(id) { return state.people.filter(function (p) { return p.parrain === id; }); }
+
+function el(tag, attrs, children) {
+  var node = document.createElement(tag);
+  attrs = attrs || {};
+  for (var k in attrs) {
+    if (k === "style") Object.assign(node.style, attrs[k]);
+    else if (k === "onclick") node.addEventListener("click", attrs[k]);
+    else if (k === "oninput") node.addEventListener("input", attrs[k]);
+    else if (k === "class") node.className = attrs[k];
+    else node.setAttribute(k, attrs[k]);
+  }
+  (children || []).forEach(function (c) {
+    if (c == null) return;
+    if (typeof c === "string") node.appendChild(document.createTextNode(c));
+    else node.appendChild(c);
+  });
+  return node;
+}
+
+/* ---------- Card rendering ---------- */
+
+function cardNode(p) {
+  var dim = !p.isWallet && !p.statut;
+  var dotColor = p.isWallet ? (p.actif ? "#3DDC84" : "#4A5054") : (p.statut ? (STATUS_COLOR[p.statut] || "#E8A33D") : "#E8A33D");
+
+  var children = [];
+  if (!p.isPlaceholder) {
+    children.push(el("span", { class: "card-dot", style: { background: dotColor } }, []));
+  }
+  children.push(el("span", { class: "card-name" }, [p.nom]));
+  if (p.u != null) children.push(el("span", { class: "card-tag" }, [p.u + "U"]));
+  if (p.niveau) children.push(el("span", { class: "card-badge", style: { background: "#5B8AA622", color: "#5B8AA6" } }, [p.niveau]));
+  if (p.isWallet && p.actif) children.push(el("span", { class: "card-badge", style: { background: "#3DDC8422", color: "#3DDC84" } }, ["ACTIF"]));
+
+  var classes = "card";
+  if (dim) classes += " dim";
+  if (p.isWallet) classes += " is-wallet";
+  if (p.isWallet && p.actif) classes += " is-active";
+  if (p.isPlaceholder) classes += " placeholder";
+  if (p.id === "barbara") classes += " is-root";
+
+  var card = el("div", { class: classes, "data-id": p.id, onclick: function () { openDetail(p); } }, children);
+  return card;
+}
+
+/* ---------- Layout: BFS by level, render rows, draw connectors after layout ---------- */
+
+function buildLevels(rootIds) {
+  var levels = [];
+  var current = rootIds.map(findById).filter(Boolean);
+  var visited = {};
+  while (current.length > 0) {
+    levels.push(current);
+    var next = [];
+    current.forEach(function (p) {
+      visited[p.id] = true;
+      childrenOf(p.id).forEach(function (c) {
+        if (!visited[c.id]) next.push(c);
+      });
+    });
+    current = next;
+  }
+  return levels;
+}
+
+function render() {
+  var canvas = document.getElementById("canvas");
+  if (state.loading) {
+    canvas.innerHTML = "";
+    canvas.appendChild(el("div", { style: { textAlign: "center", padding: "60px 20px", color: "#6B7278", fontSize: "13px" } }, ["Connexion à la base de données…"]));
+    return;
+  }
+  if (state.error) {
+    canvas.innerHTML = "";
+    canvas.appendChild(el("div", { style: { textAlign: "center", padding: "40px 20px", color: "#E8856F", fontSize: "13px", lineHeight: "1.6" } }, [
+      "⚠ Impossible de se connecter à la base de données.",
+      document.createElement("br"),
+      el("span", { style: { fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: "#80868C" } }, [state.error]),
+      document.createElement("br"),
+      el("span", { style: { fontSize: "11px", color: "#80868C" } }, ["Vérifie SUPABASE_URL et SUPABASE_ANON_KEY dans le code. Affichage de secours ci-dessous."])
+    ]));
+  }
+  renderTree();
+}
+
+function renderTree() {
+  var canvas = document.getElementById("canvas");
+  canvas.innerHTML = "";
+
+  var roots = state.people.filter(function (p) { return !p.parrain || !findById(p.parrain); });
+  var levels = buildLevels(roots.map(function (p) { return p.id; }));
+
+  // Render each level as a flex row of "groups". A group = a parent's children cluster,
+  // but to keep alignment simple & robust, we render strictly by depth level (BFS),
+  // and draw connectors afterward based on actual DOM positions.
+  var levelEls = [];
+  levels.forEach(function (levelPeople) {
+    var rowChildren = levelPeople.map(function (p) {
+      return el("div", { class: "node-group" }, [cardNode(p)]);
+    });
+    var row = el("div", { class: "level" }, rowChildren);
+    canvas.appendChild(row);
+    levelEls.push(row);
+  });
+
+  // After layout, measure positions and draw SVG connector lines (parent center-bottom -> child center-top)
+  requestAnimationFrame(function () {
+    drawConnectors(canvas, levels);
+  });
+}
+
+function drawConnectors(canvas, levels) {
+  var existing = canvas.querySelector("svg.connectors");
+  if (existing) existing.remove();
+
+  var canvasRect = canvas.getBoundingClientRect();
+  var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", "connectors");
+  svg.setAttribute("width", canvasRect.width);
+  svg.setAttribute("height", canvasRect.height);
+  svg.style.position = "absolute";
+  svg.style.top = "0";
+  svg.style.left = "0";
+
+  function centerOf(id) {
+    var node = canvas.querySelector('[data-id="' + id + '"]');
+    if (!node) return null;
+    var r = node.getBoundingClientRect();
+    return {
+      top: r.top - canvasRect.top,
+      bottom: r.bottom - canvasRect.top,
+      cx: r.left - canvasRect.left + r.width / 2
+    };
+  }
+
+  state.people.forEach(function (p) {
+    if (!p.parrain) return;
+    var parentPos = centerOf(p.parrain);
+    var childPos = centerOf(p.id);
+    if (!parentPos || !childPos) return;
+
+    var midY = parentPos.bottom + (childPos.top - parentPos.bottom) / 2;
+
+    var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    var d = "M " + parentPos.cx + " " + parentPos.bottom +
+            " L " + parentPos.cx + " " + midY +
+            " L " + childPos.cx + " " + midY +
+            " L " + childPos.cx + " " + childPos.top;
+    path.setAttribute("d", d);
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", "#222B2E");
+    path.setAttribute("stroke-width", "1.5");
+    svg.appendChild(path);
+  });
+
+  canvas.style.position = "relative";
+  canvas.insertBefore(svg, canvas.firstChild);
+}
+
+/* ---------- Modal: detail & form (unchanged logic) ---------- */
+
+function field(label, value, mono) {
+  if (value == null || value === "") return null;
+  return el("div", { class: "field" }, [
+    el("div", { class: "field-label" }, [label]),
+    el("div", { class: "field-value" + (mono ? " mono" : "") }, [String(value)])
+  ]);
+}
+
+function openDetail(p) { state.modal = { type: "detail", person: p }; renderModal(); }
+
+function openAddForm(prefillParrain) {
+  state.formData = { nom: "", parrain: prefillParrain || "", u: "", statut: "Actif", notes: "" };
+  state.modal = { type: "form", editId: null };
+  renderModal();
+}
+
+function openEditForm(p) {
+  state.formData = { nom: p.nom, parrain: p.parrain || "", u: p.u != null ? String(p.u) : "", statut: p.statut || "", notes: p.notes || "" };
+  state.modal = { type: "form", editId: p.id };
+  renderModal();
+}
+
+function closeModal() {
+  state.modal = null;
+  state.confirmDeleteId = null;
+  document.getElementById("modal-root").innerHTML = "";
+}
+
+async function submitForm() {
+  var f = state.formData;
+  if (!f.nom || !f.nom.trim()) return;
+  var savedPerson;
+  if (state.modal.editId) {
+    var idx = state.people.findIndex(function (p) { return p.id === state.modal.editId; });
+    if (idx !== -1) {
+      state.people[idx] = Object.assign({}, state.people[idx], {
+        nom: f.nom.trim(), parrain: f.parrain || null, u: f.u ? Number(f.u) : null, statut: f.statut || null, notes: f.notes
+      });
+      savedPerson = state.people[idx];
+    }
+  } else {
+    savedPerson = { id: uid(), nom: f.nom.trim(), parrain: f.parrain || null, u: f.u ? Number(f.u) : null, statut: f.statut || null, isWallet: false, notes: f.notes };
+    state.people.push(savedPerson);
+  }
+  closeModal();
+  renderTree();
+  updateTitle();
+  if (savedPerson) await persistUpsert(savedPerson);
+}
+
+async function deletePerson(id) {
+  var orphaned = state.people.filter(function (p) { return p.parrain === id; });
+  state.people = state.people.filter(function (p) { return p.id !== id; })
+    .map(function (p) { return p.parrain === id ? Object.assign({}, p, { parrain: null }) : p; });
+  closeModal();
+  renderTree();
+  updateTitle();
+  await persistDelete(id);
+  for (var i = 0; i < orphaned.length; i++) {
+    await persistUpsert(Object.assign({}, orphaned[i], { parrain: null }));
+  }
+}
+
+function renderDetailSheet(p) {
+  var badges = [];
+  if (p.statut) badges.push(el("span", { class: "card-badge", style: { background: (STATUS_COLOR[p.statut] || "#8A9196") + "22", color: STATUS_COLOR[p.statut] || "#8A9196", fontSize: "9.5px", padding: "3px 8px" } }, [p.statut.toUpperCase()]));
+  else if (!p.isWallet) badges.push(el("span", { class: "card-badge", style: { background: "#E8A33D22", color: "#E8A33D", fontSize: "9.5px", padding: "3px 8px" } }, ["NON RENSEIGNÉ"]));
+  if (p.niveau) badges.push(el("span", { class: "card-badge", style: { background: "#5B8AA622", color: "#5B8AA6", fontSize: "9.5px", padding: "3px 8px" } }, [p.niveau]));
+  if (p.isWallet && p.actif) badges.push(el("span", { class: "card-badge", style: { background: "#3DDC8422", color: "#3DDC84", fontSize: "9.5px", padding: "3px 8px" } }, ["ACTIF"]));
+
+  var fields = [];
+  if (p.isWallet) {
+    fields.push(field("Adresse", p.wallet || "—", true));
+    fields.push(field("Code d'invitation", p.code || "—", true));
+    if (!p.isPlaceholder) {
+      fields.push(field("Performance", "$" + (p.perf || 0).toLocaleString("fr-FR")));
+      fields.push(field("Adresses", p.adresses));
+    }
+  } else {
+    var parrainNode = p.parrain ? findById(p.parrain) : null;
+    fields.push(field("Parrain direct", parrainNode ? parrainNode.nom : "—"));
+    fields.push(field("Puissance individuelle", p.u != null ? p.u + " U" : "—"));
+    fields.push(field("Filleuls directs", childrenOf(p.id).length));
+  }
+
+  var sheetChildren = [
+    el("div", { class: "handle" }, []),
+    el("div", { class: "sheet-title-row" }, [
+      el("p", { class: "sheet-title" }, [p.nom]),
+      el("div", { class: "close-btn", onclick: closeModal }, ["✕"])
+    ]),
+    el("div", { class: "badges-row" }, badges)
+  ];
+  fields.forEach(function (f) { if (f) sheetChildren.push(f); });
+
+  if (p.notes) {
+    var isWarn = p.notes.indexOf("à confirmer") !== -1 || p.notes.indexOf("non renseigné") !== -1 || p.notes.indexOf("déduit") !== -1 || p.notes.indexOf("non documenté") !== -1 || p.notes.indexOf("non encore renseignés") !== -1;
+    sheetChildren.push(el("div", { class: "notes-box" + (isWarn ? " warn" : "") }, [(isWarn ? "⚠ " : "") + p.notes]));
+  }
+
+  var actionRow = [el("div", { class: "btn", onclick: function () { closeModal(); openAddForm(p.id); } }, ["+ Filleul"])];
+  if (!p.locked) {
+    actionRow.push(el("div", { class: "btn", onclick: function () { openEditForm(p); } }, ["Modifier"]));
+    actionRow.push(el("div", { class: "btn danger", onclick: function () { state.confirmDeleteId = p.id; renderModal(); } }, ["🗑"]));
+  }
+  sheetChildren.push(el("div", { class: "action-row" }, actionRow));
+
+  if (state.confirmDeleteId === p.id) {
+    sheetChildren.push(el("div", { style: { marginTop: "14px", padding: "12px 14px", background: "#1E1413", border: "1px solid #2E1D1A", borderRadius: "10px" } }, [
+      el("p", { style: { fontSize: "13px", color: "#E8856F", margin: "0 0 10px", lineHeight: "1.5" } }, ["Supprimer " + p.nom + " ? Ses filleuls deviendront orphelins."]),
+      el("div", { class: "action-row", style: { marginTop: "0" } }, [
+        el("div", { class: "btn", onclick: function () { state.confirmDeleteId = null; renderModal(); } }, ["Annuler"]),
+        el("div", { class: "btn", style: { background: "#E8856F", color: "#07090A", border: "none" }, onclick: function () { deletePerson(p.id); } }, ["Confirmer"])
+      ])
+    ]));
+  }
+
+  return el("div", { class: "sheet", onclick: function (e) { e.stopPropagation(); } }, sheetChildren);
+}
+
+function renderFormSheet() {
+  var isEdit = Boolean(state.modal.editId);
+  var f = state.formData;
+
+  var nomInput = el("input", { class: "form-input", value: f.nom, placeholder: "Ex: Jean Dupont", oninput: function (e) { f.nom = e.target.value; } }, []);
+  nomInput.value = f.nom;
+
+  var parrainSelect = el("select", { class: "form-select", oninput: function (e) { f.parrain = e.target.value; } },
+    [el("option", { value: "" }, ["— Aucun (racine) —"])].concat(
+      state.people.filter(function (p) { return !p.isWallet; }).map(function (p) {
+        var opt = el("option", { value: p.id }, [p.nom]);
+        if (p.id === f.parrain) opt.setAttribute("selected", "selected");
+        return opt;
+      })
+    )
+  );
+
+  var uInput = el("input", { class: "form-input", type: "number", placeholder: "Ex: 250", oninput: function (e) { f.u = e.target.value; } }, []);
+  uInput.value = f.u;
+
+  var statutSelect = el("select", { class: "form-select", oninput: function (e) { f.statut = e.target.value; } },
+    ["", "Actif", "Inactif"].map(function (s) {
+      var opt = el("option", { value: s }, [s || "Non renseigné"]);
+      if (s === f.statut) opt.setAttribute("selected", "selected");
+      return opt;
+    })
+  );
+
+  var notesTextarea = el("textarea", { class: "form-textarea", rows: "3", placeholder: "Canal d'acquisition, remarques...", oninput: function (e) { f.notes = e.target.value; } }, [f.notes || ""]);
+
+  return el("div", { class: "sheet", onclick: function (e) { e.stopPropagation(); } }, [
+    el("div", { class: "handle" }, []),
+    el("p", { class: "sheet-title", style: { marginBottom: "16px" } }, [isEdit ? "Modifier le membre" : "Ajouter un filleul"]),
+    el("label", { class: "form-label" }, ["Nom"]), nomInput,
+    el("label", { class: "form-label" }, ["Parrain direct"]), parrainSelect,
+    el("label", { class: "form-label" }, ["Puissance individuelle (U)"]), uInput,
+    el("label", { class: "form-label" }, ["Statut"]), statutSelect,
+    el("label", { class: "form-label" }, ["Notes"]), notesTextarea,
+    el("div", { class: "action-row" }, [
+      el("div", { class: "btn", onclick: closeModal }, ["Annuler"]),
+      el("div", { class: "btn primary", onclick: submitForm }, [isEdit ? "Enregistrer" : "Ajouter"])
+    ])
+  ]);
+}
+
+function renderModal() {
+  var root = document.getElementById("modal-root");
+  root.innerHTML = "";
+  if (!state.modal) return;
+  var sheet = state.modal.type === "detail" ? renderDetailSheet(state.modal.person) : renderFormSheet();
+  var overlay = el("div", { class: "overlay", onclick: closeModal }, [sheet]);
+  root.appendChild(overlay);
+}
+
+function updateTitle() {
+  var count = state.people.filter(function (p) { return !p.isWallet; }).length;
+  document.getElementById("member-count-title").textContent = "Réseau de Toly";
+}
+
+document.getElementById("fab-add").addEventListener("click", function () { openAddForm(""); });
+
+window.addEventListener("resize", function () {
+  var canvas = document.getElementById("canvas");
+  var roots = state.people.filter(function (p) { return !p.parrain || !findById(p.parrain); });
+  var levels = buildLevels(roots.map(function (p) { return p.id; }));
+  drawConnectors(canvas, levels);
+});
+
+loadData();
+</script>
+</body>
+</html>
